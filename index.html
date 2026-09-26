@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planilla colaborativa de mezclas — LEMaC</title>
+<meta name="description" content="Carga colaborativa de diseños de mezclas asfálticas para calibrar el Dosificador del LEMaC.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%231d5c8f%27/%3E%3Cpath d=%27M5 22h22M5 16h22M5 10h22M12 6v22M21 6v22%27 stroke=%27%23fff%27 stroke-width=%272%27/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/estilos.css">
+</head>
+<body>
+<header class="barra">
+  <div class="barra-tit">
+    <h1>Planilla colaborativa de mezclas</h1>
+    <p>Diseños históricos de mezclas asfálticas · LEMaC</p>
+  </div>
+  <div class="barra-acc">
+    <label class="autor">Aportado por
+      <input id="autor" type="text" placeholder="Tu nombre / laboratorio" autocomplete="name">
+    </label>
+    <button id="btn-ayuda" class="btn btn-plano" type="button">Instrucciones</button>
+  </div>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab activo" data-vista="fichas" role="tab" type="button">Fichas</button>
+  <button class="tab" data-vista="tabla" role="tab" type="button">Tabla</button>
+  <button class="tab" data-vista="enviar" role="tab" type="button">Enviar / Exportar</button>
+  <button class="tab" data-vista="cargadas" role="tab" type="button">Ya cargadas</button>
+  <span class="guardado" id="guardado">—</span>
+</nav>
+
+<main>
+  <!-- ============ FICHAS ============ -->
+  <section id="vista-fichas" class="vista">
+    <aside class="lista-mezclas">
+      <div class="lista-cab">
+        <strong>Mis mezclas</strong>
+        <button id="btn-nueva" class="btn btn-chico" type="button">+ Nueva</button>
+      </div>
+      <ul id="lista" class="lista"></ul>
+      <p class="nota">Los datos quedan guardados en este navegador. Cuando termines, andá a <em>Enviar / Exportar</em>.</p>
+    </aside>
+    <div class="ficha-cont">
+      <div id="ficha"></div>
+    </div>
+  </section>
+
+  <!-- ============ TABLA ============ -->
+  <section id="vista-tabla" class="vista oculta">
+    <div class="acciones-tabla">
+      <button id="btn-nueva2" class="btn btn-chico" type="button">+ Nueva mezcla</button>
+      <label class="chk"><input type="checkbox" id="chk-compacta"> Ocultar columnas que no aplican</label>
+      <div class="leyenda">
+        <span class="lg oblig-falta">Obligatorio (falta)</span>
+        <span class="lg oblig">Obligatorio</span>
+        <span class="lg recom">Recomendado</span>
+        <span class="lg naplica">No aplica</span>
+      </div>
+    </div>
+    <div class="tabla-scroll"><table id="tabla"></table></div>
+  </section>
+
+  <!-- ============ ENVIAR ============ -->
+  <section id="vista-enviar" class="vista oculta">
+    <div class="panel">
+      <h2>1 · Revisá los avisos</h2>
+      <div id="avisos"></div>
+    </div>
+    <div class="panel">
+      <h2>2 · Enviá tus mezclas al LEMaC</h2>
+      <p>La forma recomendada: se descarga un archivo con tus mezclas y se abre un aporte en GitHub para adjuntarlo.
+         Necesitás una cuenta de GitHub (gratuita).</p>
+      <div class="botonera">
+        <button id="btn-enviar" class="btn btn-fuerte" type="button">Descargar y abrir el formulario de aporte</button>
+        <button id="btn-mail" class="btn" type="button">Preparar envío por correo</button>
+      </div>
+      <p class="nota" id="nota-repo"></p>
+    </div>
+    <div class="panel">
+      <h2>3 · O descargá los archivos</h2>
+      <div class="botonera">
+        <button id="btn-xlsx" class="btn" type="button">Excel (.xlsx) con el formato original</button>
+        <button id="btn-csv" class="btn" type="button">CSV</button>
+        <button id="btn-json" class="btn" type="button">JSON (para seguir después)</button>
+      </div>
+      <p class="nota">El .xlsx sale con las mismas hojas y columnas que la planilla original, así se puede importar
+        desde <em>Pestaña 5 → Importar tabla de recopilación…</em> del Dosificador.</p>
+      <p class="nota">¿Preferís cargar en Excel? Bajate la
+        <a href="plantilla/Planilla_colaborativa_de_mezclas.xlsx">planilla original vacía</a>
+        y después subila acá abajo para revisarla y enviarla.</p>
+    </div>
+    <div class="panel">
+      <h2>Retomar un trabajo anterior</h2>
+      <p>Podés volver a cargar un .json exportado desde acá o un .xlsx con el formato de la planilla original.</p>
+      <input type="file" id="archivo" accept=".json,.xlsx,.xlsm">
+      <p class="nota">Las mezclas del archivo se agregan a las que ya tenés cargadas.</p>
+    </div>
+    <div class="panel peligro">
+      <h2>Borrar todo</h2>
+      <p>Elimina todas las mezclas guardadas en este navegador. No se puede deshacer.</p>
+      <button id="btn-borrar" class="btn btn-peligro" type="button">Borrar mis mezclas</button>
+    </div>
+  </section>
+
+  <!-- ============ CARGADAS ============ -->
+  <section id="vista-cargadas" class="vista oculta">
+    <div class="panel">
+      <h2>Mezclas ya consolidadas en el repositorio</h2>
+      <p id="resumen-cargadas">Cargando…</p>
+      <div class="botonera">
+        <button id="btn-cons-xlsx" class="btn" type="button">Descargar el consolidado en Excel</button>
+        <button id="btn-cons-mias" class="btn" type="button">Copiarlas a mis mezclas</button>
+      </div>
+      <div class="tabla-scroll"><table id="tabla-cargadas"></table></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg-ayuda">
+  <h2>Instrucciones</h2>
+  <div id="ayuda-cuerpo"></div>
+  <form method="dialog"><button class="btn" type="submit">Cerrar</button></form>
+</dialog>
+
+<script src="assets/xlsx.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

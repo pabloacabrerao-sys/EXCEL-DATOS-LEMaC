@@ -1,0 +1,57 @@
+name: Aporte de mezclas
+description: Enviar diseños de mezclas asfálticas para la planilla colaborativa del LEMaC.
+title: "Aporte de mezclas"
+labels: ["aporte"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por colaborar. Si venís de la planilla web, ya tenés descargado el archivo `.json`
+        con tus mezclas: **arrastralo al campo "Archivo con las mezclas"** de más abajo.
+  - type: input
+    id: aportante
+    attributes:
+      label: Aportado por
+      description: Nombre y laboratorio / empresa.
+      placeholder: Ej.: Juan Pérez — LEMaC UTN FRLP
+    validations:
+      required: true
+  - type: input
+    id: resumen
+    attributes:
+      label: Resumen del aporte
+      description: Cuántas mezclas y de qué tipos (la planilla lo completa solo).
+      placeholder: "Ej.: 4 mezclas (3 completas): 2 × CAC D 19, 1 × SMA 12, 1 × CAD 12"
+    validations:
+      required: true
+  - type: textarea
+    id: archivo
+    attributes:
+      label: Archivo con las mezclas
+      description: |
+        Arrastrá acá el `.json` (o el `.xlsx`) que descargaste de la planilla. GitHub lo sube y deja el enlace.
+        Si no podés adjuntarlo, pegá el contenido del `.json` entre las comillas de abajo.
+      value: |
+        ```json
+
+        ```
+    validations:
+      required: true
+  - type: textarea
+    id: origen
+    attributes:
+      label: Origen de los datos
+      description: Obra, informe, año, normas usadas o cualquier aclaración que ayude a interpretar los ensayos.
+    validations:
+      required: false
+  - type: checkboxes
+    id: confirmaciones
+    attributes:
+      label: Antes de enviar
+      options:
+        - label: La granulometría cargada es la de la **mezcla de agregados** (fórmula de obra), no la de cada fracción.
+          required: true
+        - label: La serie Marshall incluye **todos** los contenidos de asfalto ensayados, no sólo el óptimo.
+          required: true
+        - label: Tengo autorización para compartir estos datos.
+          required: true

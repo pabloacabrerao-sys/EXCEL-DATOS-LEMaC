@@ -1,0 +1,9 @@
+# archivos que llegan de los colegas (se consolidan, no se versionan por defecto)
+aportes/*
+!aportes/LEEME.md
+
+# salida generada por scripts/consolidar.py --xlsx
+datos/consolidado.xlsx
+
+.DS_Store
+Thumbs.db
