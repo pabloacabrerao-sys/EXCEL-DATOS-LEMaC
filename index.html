@@ -27,6 +27,7 @@
   <button class="tab" data-vista="tabla" role="tab" type="button">Tabla</button>
   <button class="tab" data-vista="enviar" role="tab" type="button">Enviar / Exportar</button>
   <button class="tab" data-vista="cargadas" role="tab" type="button">Ya cargadas</button>
+  <span class="nube local" id="nube">Modo local</span>
   <span class="guardado" id="guardado">—</span>
 </nav>
 
@@ -35,11 +36,12 @@
   <section id="vista-fichas" class="vista">
     <aside class="lista-mezclas">
       <div class="lista-cab">
-        <strong>Mis mezclas</strong>
+        <strong id="titulo-lista">Mis mezclas</strong>
         <button id="btn-nueva" class="btn btn-chico" type="button">+ Nueva</button>
       </div>
       <ul id="lista" class="lista"></ul>
-      <p class="nota">Los datos quedan guardados en este navegador. Cuando termines, andá a <em>Enviar / Exportar</em>.</p>
+      <button id="btn-subir" class="btn btn-chico oculta" type="button">Subir a la compartida</button>
+      <p class="nota" id="nota-lista">Los datos quedan guardados en este navegador. Cuando termines, andá a <em>Enviar / Exportar</em>.</p>
     </aside>
     <div class="ficha-cont">
       <div id="ficha"></div>
@@ -124,6 +126,7 @@
 </dialog>
 
 <script src="assets/xlsx.js"></script>
+<script src="assets/nube.js"></script>
 <script src="assets/app.js"></script>
 </body>
 </html>

@@ -6,6 +6,11 @@ para juntar diseños históricos de mezclas y calibrar el Dosificador del LEMaC.
 
 **Link para compartir:** https://pabloacabrerao-sys.github.io/EXCEL-DATOS-LEMaC/
 
+La planilla tiene dos modos: **local** (cada uno carga lo suyo y lo manda como archivo) y
+**compartido en vivo** (todos escriben sobre la misma planilla y ven los cambios al momento).
+Para prender el segundo hay que crear una base gratuita en Supabase y pegar dos datos en
+`datos/config-nube.json`: está explicado paso a paso en [CONFIGURAR-NUBE.md](CONFIGURAR-NUBE.md).
+
 ## Qué hace la página
 
 - Mismas 79 columnas, mismos ocho tipos de mezcla (CAC D 12, CAC D 19, MAC F8, MAC F10, CAD 12,
@@ -19,7 +24,10 @@ para juntar diseños históricos de mezclas y calibrar el Dosificador del LEMaC.
 - Exporta a `.xlsx` **con el mismo formato que la planilla original** (se importa desde
   *Pestaña 5 → Importar tabla de recopilación…*), a CSV y a JSON.
 - Importa un `.json` propio o un `.xlsx` con el formato de la planilla, para retomar trabajo.
-- No usa librerías externas ni CDN: el lector/escritor de `.xlsx` es `assets/xlsx.js`.
+- No usa librerías externas para lo esencial: el lector/escritor de `.xlsx` es `assets/xlsx.js`.
+- **En modo compartido**: edición simultánea con fusión campo por campo, presencia de quién está
+  editando cada celda, cola de cambios cuando se corta internet y avisos instantáneos por
+  WebSocket con sincronización por sondeo como respaldo.
 
 ## Cómo lo usa un colega
 
@@ -71,7 +79,10 @@ servidor, base de datos ni claves.
 | `assets/app.js` | lógica de la planilla (requisitos, estado, avisos, importar/exportar) |
 | `assets/xlsx.js` | lectura y escritura de `.xlsx` sin dependencias |
 | `assets/estilos.css` | estilos |
+| `assets/nube.js` | sincronización con la planilla compartida (Supabase) |
 | `datos/esquema.json` | columnas, ayudas, grupos y matriz de requisitos por tipo de mezcla |
+| `datos/config-nube.json` | URL y clave pública de Supabase; vacío = modo local |
+| `supabase/esquema.sql` | tablas, permisos y funciones de la base compartida |
 | `datos/mezclas.json` | consolidado de lo que fueron aportando los colegas |
 | `plantilla/…xlsx` | la planilla Excel original, para quien prefiera cargar ahí |
 | `scripts/consolidar.py` | junta los aportes recibidos en el consolidado |
@@ -84,10 +95,14 @@ Todo sale de `datos/esquema.json`: `columnas` (con `col`, `id`, `label`, `ayuda`
 `no_aplica`. Editando ese archivo cambian a la vez las fichas, la tabla, los avisos, el Excel que
 se exporta y el consolidador; no hay listas de columnas repetidas en el código.
 
-## Lo que esta versión no hace
+## Los dos modos
 
-Al ser una página estática, **no hay edición simultánea**: cada colega trabaja sobre su copia y la
-envía. Es a propósito — no requiere cuentas, servidores ni costos, y el dato llega en un archivo
-con el mismo formato del Excel. Si en algún momento hace falta que varios escriban sobre la misma
-planilla en vivo, hay que agregar un servicio de base de datos (Firebase, Supabase o una planilla
-de Google como back-end); el esquema y la interfaz ya quedan preparados para eso.
+| | Local (sin configurar) | Compartido en vivo |
+| --- | --- | --- |
+| Dónde quedan los datos | en el navegador de cada uno | en una base Supabase gratuita |
+| Cómo llegan al LEMaC | archivo por issue o correo | ya están; se exportan cuando haga falta |
+| Varios a la vez | cada uno en su copia | todos en la misma planilla |
+| Qué hay que configurar | nada | `datos/config-nube.json` ([guía](CONFIGURAR-NUBE.md)) |
+
+En modo compartido el envío por archivo sigue disponible: sirve para quien prefiera cargar en
+Excel o no quiera entrar a la planilla compartida.

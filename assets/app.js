@@ -13,7 +13,7 @@ const CONFIG = {
 };
 
 let ESQ = null;                                  // esquema.json
-let ST = { autor: '', sel: 0, mezclas: [] };     // estado de trabajo
+let ST = { autor: '', sel: '', mezclas: [] };    // estado de trabajo (sel = lid de la mezcla abierta)
 const PORCOL = {};                               // letra de columna -> definición
 const PORID = {};                                // id -> definición
 
@@ -94,18 +94,35 @@ function cargarGuardado() {
   } catch (e) { /* si está corrupto se arranca de cero */ }
 }
 
+function nuevoLid() {
+  return (crypto.randomUUID ? crypto.randomUUID() : 'l' + Math.random().toString(36).slice(2) + Date.now());
+}
+
 function saneaMezcla(m) {
   const d = {};
   if (m && m.d) for (const k in m.d) if (PORCOL[k]) d[k] = m.d[k];
-  return { nombre: (m && m.nombre) || '', tipo: (m && m.tipo) || '', d };
+  return {
+    lid: (m && m.lid) || nuevoLid(),
+    id: (m && m.id) || null,                      // identificador en la planilla compartida
+    nombre: (m && m.nombre) || '',
+    tipo: (m && m.tipo) || '',
+    aportante: (m && m.aportante) || '',
+    d: d
+  };
 }
 
+const mid = m => m.id || m.lid;
+const mezclaPorLid = lid => ST.mezclas.find(m => m.lid === lid) || null;
+const mezclaSel = () => mezclaPorLid(ST.sel) || ST.mezclas[0] || null;
+const tablaVisible = () => !$('#vista-tabla').classList.contains('oculta');
+
 function nuevaMezcla(tipo) {
-  const m = { nombre: 'Mezcla ' + (ST.mezclas.length + 1), tipo: tipo || '', d: {} };
+  const m = saneaMezcla({ nombre: 'Mezcla ' + (ST.mezclas.length + 1), tipo: tipo || '', aportante: ST.autor });
   if (ST.autor) m.d[PORID.aportado_por.col] = ST.autor;
   ST.mezclas.push(m);
-  ST.sel = ST.mezclas.length - 1;
+  ST.sel = m.lid;
   guardar();
+  subirSiHaceFalta(m);
   return m;
 }
 
@@ -119,9 +136,14 @@ function pintarLista() {
   }
   ST.mezclas.forEach((m, i) => {
     const e = estado(m);
-    const b = el('button', { type: 'button', class: i === ST.sel ? 'sel' : '', onclick: () => { ST.sel = i; pintarFichas(); } });
+    const b = el('button', {
+      type: 'button', class: m.lid === ST.sel ? 'sel' : '',
+      onclick: () => { ST.sel = m.lid; pintarFichas(); }
+    });
     b.appendChild(document.createTextNode(m.nombre || 'Mezcla ' + (i + 1)));
-    b.appendChild(el('span', { class: 'lst-tipo', text: (m.tipo || 'sin tipo') + ' · ' + e.texto }));
+    const quien = Nube.estado.activa && m.aportante && m.aportante !== ST.autor ? ' · ' + m.aportante : '';
+    b.appendChild(el('span', { class: 'lst-tipo', text: (m.tipo || 'sin tipo') + ' · ' + e.texto + quien }));
+    if (Nube.estado.activa && !m.id) b.appendChild(el('span', { class: 'lst-tipo', text: 'sin subir' }));
     ul.appendChild(el('li', {}, [b]));
   });
 }
@@ -141,14 +163,18 @@ function inputCampo(mez, def, enTabla) {
     });
   }
   n.dataset.col = def.col;
+  n.dataset.mid = mid(mez);
   n.addEventListener('input', () => {
     mez.d[def.col] = n.value.trim();
     if (def.col === PORID.aportado_por.col && n.value.trim() && !ST.autor) {
       ST.autor = n.value.trim(); $('#autor').value = ST.autor;
     }
+    encolar(mez, def.col, mez.d[def.col]);
     alCambiar(mez, def.col, n);
   });
   n.addEventListener('change', guardar);
+  n.addEventListener('focus', () => avisarFoco(mez, def.col));
+  n.addEventListener('blur', () => avisarFoco(null, ''));
   return n;
 }
 
@@ -194,7 +220,8 @@ function pintarFichas() {
   pintarLista();
   const cont = $('#ficha');
   cont.textContent = '';
-  const mez = ST.mezclas[ST.sel];
+  const mez = mezclaSel();
+  if (mez) ST.sel = mez.lid;
   if (!mez) {
     cont.appendChild(el('div', { class: 'vacio-ficha' }, [
       el('p', { text: 'Agregá tu primera mezcla con el botón “+ Nueva”.' }),
@@ -205,13 +232,22 @@ function pintarFichas() {
 
   // cabecera: nombre, tipo, estado, borrar
   const inNombre = el('input', { type: 'text', value: mez.nombre });
-  inNombre.addEventListener('input', () => { mez.nombre = inNombre.value; pintarLista(); clearTimeout(alCambiar._t); alCambiar._t = setTimeout(guardar, 600); });
+  inNombre.addEventListener('input', () => {
+    mez.nombre = inNombre.value;
+    encolar(mez, '__nombre', mez.nombre);
+    pintarLista();
+    clearTimeout(alCambiar._t); alCambiar._t = setTimeout(guardar, 600);
+  });
 
   const selTipo = el('select');
   selTipo.appendChild(el('option', { value: '', text: '— elegir —' }));
   ESQ.tipos.forEach(t => selTipo.appendChild(el('option', { value: t.nombre, text: t.nombre })));
   selTipo.value = mez.tipo || '';
-  selTipo.addEventListener('change', () => { mez.tipo = selTipo.value; guardar(); pintarFichas(); if (!$('#vista-tabla').classList.contains('oculta')) pintarTabla(); });
+  selTipo.addEventListener('change', () => {
+    mez.tipo = selTipo.value;
+    encolar(mez, '__tipo', mez.tipo);
+    guardar(); pintarFichas(); if (tablaVisible()) pintarTabla();
+  });
 
   const cab = el('div', { class: 'ficha-cab' }, [
     el('label', { class: 'campo t' }, [el('span', { text: 'Nombre de la mezcla' }), inNombre]),
@@ -220,10 +256,12 @@ function pintarFichas() {
     el('button', {
       class: 'btn btn-chico btn-peligro', type: 'button', text: 'Borrar esta mezcla',
       onclick: () => {
-        if (!confirm('¿Borrar “' + (mez.nombre || 'esta mezcla') + '”?')) return;
-        ST.mezclas.splice(ST.sel, 1);
-        ST.sel = Math.max(0, ST.sel - 1);
-        guardar(); pintarFichas(); pintarTabla();
+        const compartida = Nube.estado.activa && mez.id;
+        const aviso = compartida
+          ? '¿Borrar “' + (mez.nombre || 'esta mezcla') + '” de la planilla compartida? La van a dejar de ver todos.'
+          : '¿Borrar “' + (mez.nombre || 'esta mezcla') + '”?';
+        if (!confirm(aviso)) return;
+        borrarMezcla(mez);
       }
     })
   ]);
@@ -288,14 +326,18 @@ function pintarTabla() {
 
   const tb = el('tbody');
   ST.mezclas.forEach((mez, i) => {
-    const tr = el('tr');
+    const tr = el('tr', { 'data-fila': mid(mez) });
     tr.appendChild(el('td', { class: 'fija f0', text: String(i + 1) }));
 
     const sel = el('select');
     sel.appendChild(el('option', { value: '', text: '—' }));
     ESQ.tipos.forEach(t => sel.appendChild(el('option', { value: t.nombre, text: t.nombre })));
     sel.value = mez.tipo || '';
-    sel.addEventListener('change', () => { mez.tipo = sel.value; guardar(); pintarTabla(); pintarLista(); });
+    sel.addEventListener('change', () => {
+      mez.tipo = sel.value;
+      encolar(mez, '__tipo', mez.tipo);
+      guardar(); pintarTabla(); pintarLista();
+    });
     tr.appendChild(el('td', { class: 'fija f1 sel-tipo' }, [sel]));
 
     const e = estado(mez);
@@ -310,9 +352,8 @@ function pintarTabla() {
     }, [el('button', {
       type: 'button', title: 'Borrar la fila', text: '✕',
       onclick: () => {
-        if (!confirm('¿Borrar la fila ' + (i + 1) + '?')) return;
-        ST.mezclas.splice(i, 1); ST.sel = Math.max(0, ST.sel - 1);
-        guardar(); pintarTabla(); pintarFichas();
+        if (!confirm('¿Borrar la fila ' + (i + 1) + (Nube.estado.activa && mez.id ? ' de la planilla compartida?' : '?'))) return;
+        borrarMezcla(mez);
       }
     })]));
     tb.appendChild(tr);
@@ -330,6 +371,287 @@ function aplicarCompacta() {
       conTipo.every(m => req(m, L) === 'no_aplica') &&
       ST.mezclas.every(m => vacio(m.d[L]));
     col.className = ocultar ? 'oculta' : '';
+  });
+}
+
+/* ================================================================ EN VIVO ==
+   Sincronización con la planilla compartida: cola de cambios propios, fusión
+   de los cambios ajenos campo por campo y presencia de quien está editando. */
+
+const PENDIENTES = {};      // lid -> {columna|__nombre|__tipo: valor}
+let PRESENTES = [];         // otras personas conectadas
+let relojEnvio = null, relojReintento = null;
+
+const aDatosId = d => {
+  const o = {};
+  ESQ.columnas.forEach(c => { if (!vacio(d[c.col])) o[c.id] = d[c.col]; });
+  return o;
+};
+
+function encolar(mez, clave, valor) {
+  if (!Nube.estado.activa) return;
+  (PENDIENTES[mez.lid] = PENDIENTES[mez.lid] || {})[clave] = valor;
+  clearTimeout(relojEnvio);
+  relojEnvio = setTimeout(enviarPendientes, 700);
+}
+
+function enviarPendientes() {
+  if (!Nube.estado.activa) return;
+  ST.mezclas.forEach(mez => {
+    const p = PENDIENTES[mez.lid];
+    if (!p || !Object.keys(p).length) return;
+    if (!mez.id) { subirSiHaceFalta(mez); return; }   // todavía no existe en la base
+    delete PENDIENTES[mez.lid];
+    const parche = {};
+    let nombre, tipo;
+    for (const k in p) {
+      if (k === '__nombre') nombre = p[k];
+      else if (k === '__tipo') tipo = p[k];
+      else if (PORCOL[k]) parche[PORCOL[k].id] = vacio(p[k]) ? null : p[k];
+    }
+    Nube.parchear(mez.id, parche, nombre, tipo)
+      .catch(() => {                                   // sin conexión: se reintenta
+        const otra = PENDIENTES[mez.lid] = PENDIENTES[mez.lid] || {};
+        for (const k in p) if (!(k in otra)) otra[k] = p[k];
+      });
+  });
+}
+
+function subirSiHaceFalta(mez) {
+  if (!Nube.estado.activa || mez.id || mez.subiendo) return Promise.resolve();
+  mez.subiendo = true;
+  return Nube.crear({ nombre: mez.nombre, tipo: mez.tipo, datos: aDatosId(mez.d) })
+    .then(fila => {
+      mez.subiendo = false;
+      if (!fila || !fila.id) return;
+      mez.id = fila.id;
+      mez.aportante = fila.aportante || ST.autor;
+      guardar(); repintar();
+      enviarPendientes();                          // lo tipeado mientras subía
+    })
+    .catch(() => { mez.subiendo = false; });
+}
+
+// Busca el input de una celda concreta (la mezcla puede haber cambiado de
+// identificador al subirse, por eso se resuelve siempre desde la mezcla).
+function nodoDe(mez, col) {
+  const clave = mid(mez);
+  return $$('[data-col="' + col + '"]').find(n => n.dataset.mid === clave) || null;
+}
+
+// Repinta sin robarle el cursor a quien está escribiendo: si alguien agrega una
+// fila o cambia un tipo, el que estaba tipeando sigue en su celda y su posición.
+function repintar() {
+  const a = document.activeElement;
+  let ref = null;
+  if (a && a.dataset && a.dataset.col) {
+    const m = ST.mezclas.find(x => mid(x) === a.dataset.mid);
+    if (m) ref = { lid: m.lid, col: a.dataset.col, ini: a.selectionStart, fin: a.selectionEnd };
+  }
+  pintarFichas();
+  if (tablaVisible()) pintarTabla();
+  if (!ref) return;
+  const m = mezclaPorLid(ref.lid);
+  const n = m && nodoDe(m, ref.col);
+  if (!n) return;
+  n.focus();
+  if (ref.ini !== null && ref.ini !== undefined && n.setSelectionRange) {
+    try { n.setSelectionRange(ref.ini, ref.fin); } catch (e) { /* selects no tienen selección */ }
+  }
+  avisarFoco(m, ref.col);
+}
+
+function subirTodasLocales() {
+  if (!Nube.estado.activa) return;
+  ST.mezclas.forEach(m => subirSiHaceFalta(m));
+}
+
+function borrarMezcla(mez) {
+  const quitar = () => {
+    ST.mezclas = ST.mezclas.filter(x => x.lid !== mez.lid);
+    delete PENDIENTES[mez.lid];
+    if (ST.sel === mez.lid) ST.sel = ST.mezclas.length ? ST.mezclas[0].lid : '';
+    guardar(); repintar(); pintarAvisos();
+  };
+  if (Nube.estado.activa && mez.id) {
+    Nube.borrar(mez.id).then(quitar).catch(() => alert('No se pudo borrar en la planilla compartida. Revisá la conexión y probá de nuevo.'));
+  } else quitar();
+}
+
+// ¿el usuario está escribiendo justo en esta celda?
+function enFoco(mez, col) {
+  const a = document.activeElement;
+  return !!(a && a.dataset && a.dataset.col === col && a.dataset.mid === mid(mez));
+}
+
+function desdeFila(f) {
+  const d = {};
+  const datos = f.datos || {};
+  for (const k in datos) if (PORID[k] && !vacio(datos[k])) d[PORID[k].col] = String(datos[k]);
+  return saneaMezcla({ id: f.id, nombre: f.nombre, tipo: f.tipo, aportante: f.aportante, d: d });
+}
+
+// Aplica una fila remota sobre la copia local. Devuelve 'estructura' si hay que
+// repintar todo (cambió el tipo) o 'valores' si alcanza con refrescar celdas.
+function fusionarFila(mez, f) {
+  const p = PENDIENTES[mez.lid] || {};
+  let cambio = '';
+  if (!('__tipo' in p) && (f.tipo || '') !== mez.tipo) { mez.tipo = f.tipo || ''; cambio = 'estructura'; }
+  if (!('__nombre' in p) && (f.nombre || '') !== mez.nombre) { mez.nombre = f.nombre || ''; cambio = cambio || 'valores'; }
+  if ((f.aportante || '') !== mez.aportante) { mez.aportante = f.aportante || ''; cambio = cambio || 'valores'; }
+
+  const remoto = {};
+  const datos = f.datos || {};
+  for (const k in datos) if (PORID[k]) remoto[PORID[k].col] = vacio(datos[k]) ? '' : String(datos[k]);
+
+  ESQ.columnas.forEach(c => {
+    if (c.col in p) return;                    // hay un cambio propio sin enviar
+    if (enFoco(mez, c.col)) return;            // lo está escribiendo ahora mismo
+    const nuevo = remoto[c.col] || '';
+    const actual = mez.d[c.col] || '';
+    if (nuevo === actual) return;
+    if (nuevo === '') delete mez.d[c.col]; else mez.d[c.col] = nuevo;
+    cambio = cambio || 'valores';
+  });
+  return cambio;
+}
+
+// Refresca en pantalla las celdas de una mezcla sin repintar la planilla.
+function refrescarNodos(mez) {
+  const clave = mid(mez);
+  $$('[data-mid]').forEach(n => {
+    if (n.dataset.mid !== clave) return;
+    const col = n.dataset.col;
+    if (!col || document.activeElement === n) return;
+    const v = mez.d[col] ?? '';
+    if (n.value !== String(v)) n.value = v;
+    const td = n.closest('td');
+    if (td) td.className = (td.classList.contains('num') ? 'num ' : '') + claseCelda(mez, col);
+    const campo = n.closest('label.campo');
+    if (campo) {
+      const marca = campo.querySelector('.marca.ob');
+      if (marca) marca.classList.toggle('hay', !vacio(mez.d[col]));
+    }
+  });
+  const e = estado(mez);
+  const tr = document.querySelector('tr[data-fila="' + (window.CSS && CSS.escape ? CSS.escape(clave) : clave) + '"]');
+  const celda = tr && tr.querySelector('td.est');
+  if (celda) { celda.className = 'est fija f2 ' + e.clase; celda.textContent = e.texto; }
+  if (mezclaSel() === mez) pintarEstadoFicha(mez);
+  pintarLista();
+}
+
+function fusionarRemotas(filas) {
+  const porId = new Map(ST.mezclas.filter(m => m.id).map(m => [m.id, m]));
+  const vistos = new Set();
+  let estructura = false;
+  const refrescar = [];
+
+  (filas || []).forEach(f => {
+    vistos.add(f.id);
+    const m = porId.get(f.id);
+    if (!m) { ST.mezclas.push(desdeFila(f)); estructura = true; return; }
+    const cambio = fusionarFila(m, f);
+    if (cambio === 'estructura') estructura = true;
+    else if (cambio === 'valores') refrescar.push(m);
+  });
+
+  // filas que otro borró
+  const quedan = ST.mezclas.filter(m => !m.id || vistos.has(m.id));
+  if (quedan.length !== ST.mezclas.length) {
+    ST.mezclas = quedan;
+    estructura = true;
+  }
+  if (!mezclaSel() && ST.mezclas.length) ST.sel = ST.mezclas[0].lid;
+
+  guardar();
+  if (estructura) {
+    repintar();
+  } else {
+    refrescar.forEach(refrescarNodos);
+  }
+  if (!$('#vista-enviar').classList.contains('oculta')) pintarAvisos();
+  pintarFoco();
+}
+
+/* ------------------------------------------------------------- presencia */
+function avisarFoco(mez, col) {
+  if (!Nube.estado.activa) return;
+  Nube.anunciar(mez && mez.id ? mez.id + '|' + col : '');
+}
+
+function pintarPresencia(lista) {
+  PRESENTES = lista || [];
+  pintarEstadoNube();
+  pintarFoco();
+}
+
+// Marca las celdas que otra persona está editando en este momento.
+function pintarFoco() {
+  $$('.foco-otro').forEach(n => { n.classList.remove('foco-otro'); n.removeAttribute('title'); });
+  PRESENTES.forEach(p => {
+    if (!p.foco) return;
+    const corte = p.foco.indexOf('|');
+    if (corte < 0) return;
+    const idFila = p.foco.slice(0, corte), col = p.foco.slice(corte + 1);
+    $$('[data-mid]').forEach(n => {
+      if (n.dataset.mid !== idFila || n.dataset.col !== col) return;
+      const marca = n.closest('td') || n.closest('label.campo') || n;
+      marca.classList.add('foco-otro');
+      marca.setAttribute('title', (p.nombre || 'Otra persona') + ' está editando este dato');
+    });
+  });
+}
+
+function pintarEstadoNube() {
+  const n = $('#nube');
+  if (!n) return;
+  const e = Nube.estado;
+  let clase = 'nube', txt = '';
+  if (!e.activa) { clase += ' local'; txt = 'Modo local'; }
+  else if (!e.conectada) { clase += ' mal'; txt = 'Sin conexión — se guarda acá y se sincroniza'; }
+  else {
+    clase += ' bien';
+    const otros = PRESENTES.length;
+    txt = (e.enVivo ? 'En vivo' : 'Sincronizada') + ' · ' +
+      (otros ? otros + ' colega(s) conectado(s)' : 'sólo vos');
+  }
+  n.className = clase;
+  n.textContent = txt;
+  n.title = PRESENTES.length
+    ? 'Conectados: ' + PRESENTES.map(p => p.nombre || 'alguien').join(', ')
+    : (e.error || '');
+  const tit = $('#titulo-lista');
+  if (tit) tit.textContent = e.activa ? 'Mezclas del equipo' : 'Mis mezclas';
+  const nota = $('#nota-lista');
+  if (nota) {
+    nota.textContent = e.activa
+      ? 'Todos ven y editan la misma planilla. Los cambios se sincronizan solos; si te quedás sin internet, se guardan acá y suben al volver.'
+      : 'Los datos quedan guardados en este navegador. Cuando termines, andá a Enviar / Exportar.';
+  }
+  const sin = ST.mezclas.filter(m => !m.id).length;
+  const b = $('#btn-subir');
+  if (b) {
+    b.classList.toggle('oculta', !(e.activa && sin));
+    b.textContent = 'Subir ' + sin + ' mezcla(s) a la compartida';
+  }
+}
+
+function arrancarNube() {
+  return Nube.iniciar({
+    nombre: ST.autor,
+    alCambiar: fusionarRemotas,
+    alEstado: () => pintarEstadoNube(),
+    alPresencia: pintarPresencia
+  }).then(() => {
+    pintarEstadoNube();
+    if (!Nube.estado.activa) return;
+    clearInterval(relojReintento);
+    relojReintento = setInterval(() => {         // reintentos de lo que quedó sin enviar
+      if (document.hidden) return;
+      ST.mezclas.forEach(m => { if (!m.id) subirSiHaceFalta(m); });
+      enviarPendientes();
+    }, 6000);
   });
 }
 
@@ -521,7 +843,7 @@ function importarJSON(obj) {
       const def = PORID[k] || PORCOL[k];
       if (def && !vacio(src[k])) d[def.col] = String(src[k]).trim();
     }
-    ST.mezclas.push({ nombre: m.nombre || 'Mezcla ' + (ST.mezclas.length + 1), tipo: m.tipo || '', d });
+    ST.mezclas.push(saneaMezcla({ nombre: m.nombre || 'Mezcla ' + (ST.mezclas.length + 1), tipo: m.tipo || '', aportante: ST.autor, d: d }));
     n++;
   });
   if (!ST.autor && obj.aportante) { ST.autor = obj.aportante; $('#autor').value = ST.autor; }
@@ -550,10 +872,10 @@ function importarXLSX(buf) {
         if (!vacio(v)) d[mapa[k].col] = typeof v === 'number' ? coma(v) : String(v).trim();
       }
       if (!tipo && !Object.keys(d).length) continue;
-      ST.mezclas.push({
+      ST.mezclas.push(saneaMezcla({
         nombre: (iNom >= 0 ? String(f[iNom] ?? '').trim() : '') || 'Mezcla ' + (ST.mezclas.length + 1),
-        tipo: tipo, d: d
-      });
+        tipo: tipo, aportante: ST.autor, d: d
+      }));
       n++;
     }
     return n;
@@ -564,7 +886,7 @@ function alElegirArchivo(ev) {
   const f = ev.target.files && ev.target.files[0];
   if (!f) return;
   const fin = n => {
-    guardar(); pintarFichas(); pintarTabla(); pintarAvisos();
+    guardar(); subirTodasLocales(); pintarFichas(); pintarTabla(); pintarAvisos();
     alert(n ? 'Se agregaron ' + n + ' mezcla(s).' : 'El archivo no tenía mezclas para agregar.');
     ev.target.value = '';
   };
@@ -709,7 +1031,8 @@ function iniciar() {
   $('#autor').value = ST.autor;
   $('#autor').addEventListener('input', e => {
     ST.autor = e.target.value.trim();
-    clearTimeout(alCambiar._t); alCambiar._t = setTimeout(guardar, 600);
+    clearTimeout(alCambiar._t);
+    alCambiar._t = setTimeout(() => { guardar(); Nube.nombrar(ST.autor); }, 600);
   });
   $$('.tab').forEach(b => b.addEventListener('click', () => cambiarVista(b.dataset.vista)));
   $('#btn-nueva').addEventListener('click', () => { nuevaMezcla(); pintarFichas(); });
@@ -722,8 +1045,16 @@ function iniciar() {
   $('#btn-mail').addEventListener('click', enviarCorreo);
   $('#archivo').addEventListener('change', alElegirArchivo);
   $('#btn-borrar').addEventListener('click', () => {
+    if (Nube.estado.activa) {
+      if (!confirm('Esto limpia la copia de este navegador. Las mezclas ya subidas siguen en la planilla compartida ' +
+        '(para sacar una de ahí, abrila y usá “Borrar esta mezcla”). ¿Seguimos?')) return;
+      ST.mezclas = []; ST.sel = ''; guardar();
+      pintarFichas(); pintarTabla(); pintarAvisos();
+      Nube.sondear();
+      return;
+    }
     if (!confirm('¿Borrar todas las mezclas guardadas en este navegador?')) return;
-    ST.mezclas = []; ST.sel = 0; guardar(); pintarFichas(); pintarTabla(); pintarAvisos();
+    ST.mezclas = []; ST.sel = ''; guardar(); pintarFichas(); pintarTabla(); pintarAvisos();
   });
   $('#btn-cons-xlsx').addEventListener('click', () => {
     if (!CARGADAS.length) { alert('Todavía no hay mezclas consolidadas.'); return; }
@@ -732,13 +1063,16 @@ function iniciar() {
   $('#btn-cons-mias').addEventListener('click', () => {
     if (!CARGADAS.length) { alert('Todavía no hay mezclas consolidadas.'); return; }
     if (!confirm('Se van a agregar ' + CARGADAS.length + ' mezcla(s) del consolidado a las tuyas. ¿Seguimos?')) return;
-    CARGADAS.forEach(m => ST.mezclas.push({ nombre: m.nombre, tipo: m.tipo, d: Object.assign({}, m.d) }));
-    guardar(); pintarFichas(); cambiarVista('fichas');
+    CARGADAS.forEach(m => ST.mezclas.push(saneaMezcla({ nombre: m.nombre, tipo: m.tipo, d: Object.assign({}, m.d) })));
+    guardar(); subirTodasLocales(); pintarFichas(); cambiarVista('fichas');
   });
   $('#btn-ayuda').addEventListener('click', () => { pintarAyuda(); $('#dlg-ayuda').showModal(); });
+  $('#btn-subir').addEventListener('click', () => { subirTodasLocales(); pintarEstadoNube(); });
   $('#nota-repo').textContent = 'Los aportes van al repositorio ' + repoDetectado() + '.';
   marcarGuardado(ST.mezclas.length ? ST.mezclas.length + ' mezcla(s) guardada(s)' : 'sin datos todavía');
+  if (ST.mezclas.length) ST.sel = ST.mezclas[0].lid;
   pintarFichas();
+  arrancarNube();
   window.addEventListener('beforeunload', guardar);
 }
 
