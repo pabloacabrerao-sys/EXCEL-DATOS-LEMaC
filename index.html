@@ -18,13 +18,13 @@
     <label class="autor">Aportado por
       <input id="autor" type="text" placeholder="Tu nombre / laboratorio" autocomplete="name">
     </label>
-    <button id="btn-ayuda" class="btn btn-plano" type="button">Instrucciones</button>
   </div>
 </header>
 
 <nav class="tabs" role="tablist">
-  <button class="tab activo" data-vista="fichas" role="tab" type="button">Fichas</button>
+  <button class="tab activo" data-vista="instrucciones" role="tab" type="button">Instrucciones</button>
   <button class="tab" data-vista="tabla" role="tab" type="button">Tabla</button>
+  <button class="tab" data-vista="fichas" role="tab" type="button">Fichas</button>
   <button class="tab" data-vista="enviar" role="tab" type="button">Enviar / Exportar</button>
   <button class="tab" data-vista="cargadas" role="tab" type="button">Ya cargadas</button>
   <span class="nube local" id="nube">Modo local</span>
@@ -32,8 +32,93 @@
 </nav>
 
 <main>
+  <!-- ============ INSTRUCCIONES ============ -->
+  <section id="vista-instrucciones" class="vista">
+    <div class="guia">
+      <h2 class="guia-tit">Cómo cargar una mezcla</h2>
+      <p class="guia-bajada">Se hace desde el navegador, no hay que instalar nada.
+        Lo que cargues se guarda solo.</p>
+
+      <ol class="pasos">
+        <li>
+          <span class="paso-n">1</span>
+          <div class="paso-cuerpo">
+            <h3>Escribí tu nombre</h3>
+            <p>Arriba de todo, donde dice <b>“Aportado por”</b>. Sirve para saber de quién es
+              cada dato. Se pone una sola vez.</p>
+          </div>
+        </li>
+        <li>
+          <span class="paso-n">2</span>
+          <div class="paso-cuerpo">
+            <h3>Andá a la hoja <b>Tabla</b> y cargá la mezcla</h3>
+            <p>Tocá <b>“+ Nueva mezcla”</b>, elegí el <b>tipo de mezcla</b> en la primera columna
+              y completá los datos. La planilla pinta las celdas para guiarte:</p>
+            <ul class="colores">
+              <li><span class="mm oblig-falta"></span><span><b>Naranja</b>: es obligatorio y falta cargarlo.</span></li>
+              <li><span class="mm oblig"></span><span><b>Verde</b>: obligatorio, ya cargado.</span></li>
+              <li><span class="mm recom"></span><span><b>Amarillo</b>: no es obligatorio, pero suma si lo tenés.</span></li>
+              <li><span class="mm naplica"></span><span><b>Gris</b>: no corresponde a ese tipo de mezcla, dejalo vacío.</span></li>
+            </ul>
+            <p>La columna <b>Estado</b> te va diciendo cuántos datos obligatorios faltan.
+              Con eso solo, ya está: <b id="inst-cierre">no hace falta hacer nada más</b>.</p>
+            <button class="btn btn-fuerte btn-ir" type="button" data-ir="tabla">Empezar a cargar →</button>
+          </div>
+        </li>
+      </ol>
+
+      <h2 class="guia-tit chico">Lo demás es opcional</h2>
+      <ol class="pasos opcionales">
+        <li>
+          <span class="paso-n">3</span>
+          <div class="paso-cuerpo">
+            <h3>Ver las mezclas de a una: hoja <b>Fichas</b></h3>
+            <p>Muestra una mezcla por vez y sólo los datos que corresponden a su tipo. Es más
+              cómoda para revisar, y para cargar desde el celular.</p>
+            <button class="btn btn-ir" type="button" data-ir="fichas">Ir a Fichas</button>
+          </div>
+        </li>
+        <li>
+          <span class="paso-n">4</span>
+          <div class="paso-cuerpo">
+            <h3>Bajar el Excel: hoja <b>Enviar / Exportar</b></h3>
+            <p>Descarga <b>todas</b> las mezclas que haya cargadas en ese momento, en un Excel con
+              el mismo formato de la planilla original. Desde ahí también se puede subir un Excel
+              ya completado.</p>
+            <button class="btn btn-ir" type="button" data-ir="enviar">Ir a Enviar / Exportar</button>
+          </div>
+        </li>
+        <li>
+          <span class="paso-n">5</span>
+          <div class="paso-cuerpo">
+            <h3>Ver lo que ya se juntó: hoja <b>Ya cargadas</b></h3>
+            <p>Las mezclas que el LEMaC ya revisó y guardó en el repositorio.</p>
+            <button class="btn btn-ir" type="button" data-ir="cargadas">Ir a Ya cargadas</button>
+          </div>
+        </li>
+      </ol>
+
+      <div class="ojo">
+        <h3>Dos cosas importantes al cargar</h3>
+        <ul>
+          <li>La <b>granulometría</b> es la de la <b>mezcla de agregados</b> (fórmula de obra),
+            no la de cada fracción por separado.</li>
+          <li>De la <b>serie Marshall</b> van <b>todos</b> los contenidos de asfalto ensayados
+            (mínimo 3, ideal 5), no solamente el óptimo.</li>
+        </ul>
+        <p class="chiquito">Los números se escriben con coma o con punto, como te salga.
+          Al lado de cada dato hay un <span class="ayuda-i">i</span>: tocalo y te dice la norma o una aclaración.</p>
+      </div>
+
+      <details class="detalle">
+        <summary>Ver el detalle completo de qué datos se cargan</summary>
+        <div id="ayuda-cuerpo"></div>
+      </details>
+    </div>
+  </section>
+
   <!-- ============ FICHAS ============ -->
-  <section id="vista-fichas" class="vista">
+  <section id="vista-fichas" class="vista oculta">
     <aside class="lista-mezclas">
       <div class="lista-cab">
         <strong id="titulo-lista">Mis mezclas</strong>
@@ -118,12 +203,6 @@
     </div>
   </section>
 </main>
-
-<dialog id="dlg-ayuda">
-  <h2>Instrucciones</h2>
-  <div id="ayuda-cuerpo"></div>
-  <form method="dialog"><button class="btn" type="submit">Cerrar</button></form>
-</dialog>
 
 <script src="assets/xlsx.js"></script>
 <script src="assets/nube.js"></script>

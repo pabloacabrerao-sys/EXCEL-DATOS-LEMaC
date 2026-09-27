@@ -15,8 +15,10 @@ Para prender el segundo hay que crear una base gratuita en Supabase y pegar dos 
 
 - Mismas 79 columnas, mismos ocho tipos de mezcla (CAC D 12, CAC D 19, MAC F8, MAC F10, CAD 12,
   SMA 10, SMA 12, SMA 19) y la misma matriz de obligatorio / recomendado / no aplica del Excel.
-- **Fichas**: muestra sólo los datos que corresponden al tipo elegido, con la norma de cada ensayo
-  a mano. **Tabla**: la planilla completa, con los mismos colores que el Excel.
+- **Instrucciones**: es lo primero que se abre, con los pasos en texto grande y botones que llevan
+  a cada hoja. **Tabla**: la planilla completa, con los mismos colores que el Excel.
+  **Fichas**: una mezcla por vez, mostrando sólo los datos que corresponden al tipo elegido, con
+  la norma de cada ensayo a mano.
 - Calcula el estado de cada mezcla (*Completa* o *Faltan N*) mientras se carga.
 - Guarda solo en el navegador de quien carga: se puede cerrar y seguir otro día.
 - Revisa los datos antes de enviar: obligatorios que faltan, granulometría que crece, series

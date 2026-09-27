@@ -621,6 +621,12 @@ function pintarEstadoNube() {
   n.title = PRESENTES.length
     ? 'Conectados: ' + PRESENTES.map(p => p.nombre || 'alguien').join(', ')
     : (e.error || '');
+  const cierre = $('#inst-cierre');
+  if (cierre) {
+    cierre.textContent = e.activa
+      ? 'no hace falta enviar nada, el LEMaC ya lo ve'
+      : 'al terminar, mandalo desde “Enviar / Exportar” (paso 4)';
+  }
   const tit = $('#titulo-lista');
   if (tit) tit.textContent = e.activa ? 'Mezclas del equipo' : 'Mis mezclas';
   const nota = $('#nota-lista');
@@ -1018,7 +1024,8 @@ function pintarAyuda() {
 /* ------------------------------------------------------------------- inicio */
 function cambiarVista(v) {
   $$('.tab').forEach(b => b.classList.toggle('activo', b.dataset.vista === v));
-  ['fichas', 'tabla', 'enviar', 'cargadas'].forEach(x => $('#vista-' + x).classList.toggle('oculta', x !== v));
+  ['instrucciones', 'fichas', 'tabla', 'enviar', 'cargadas'].forEach(x => $('#vista-' + x).classList.toggle('oculta', x !== v));
+  window.scrollTo(0, 0);
   if (v === 'tabla') pintarTabla();
   if (v === 'enviar') pintarAvisos();
   if (v === 'cargadas') pintarCargadas();
@@ -1066,7 +1073,8 @@ function iniciar() {
     CARGADAS.forEach(m => ST.mezclas.push(saneaMezcla({ nombre: m.nombre, tipo: m.tipo, d: Object.assign({}, m.d) })));
     guardar(); subirTodasLocales(); pintarFichas(); cambiarVista('fichas');
   });
-  $('#btn-ayuda').addEventListener('click', () => { pintarAyuda(); $('#dlg-ayuda').showModal(); });
+  pintarAyuda();
+  $$('.btn-ir').forEach(b => b.addEventListener('click', () => cambiarVista(b.dataset.ir)));
   $('#nube').addEventListener('click', () => {
     alert(Nube.diagnostico());
     if (Nube.estado.activa) Nube.sondear();
