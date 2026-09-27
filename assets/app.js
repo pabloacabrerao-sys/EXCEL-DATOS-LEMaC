@@ -21,6 +21,14 @@ const PORID = {};                                // id -> definición
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
+// Engancha un evento sólo si el elemento existe: así una versión vieja de este
+// archivo servida desde la caché nunca puede cortar el arranque de la página.
+function alTocar(sel, evento, fn) {
+  const n = $(sel);
+  if (n) n.addEventListener(evento, fn);
+  return n;
+}
+
 function el(tag, attrs, hijos) {
   const n = document.createElement(tag);
   if (attrs) for (const k in attrs) {
@@ -1026,6 +1034,8 @@ function cambiarVista(v) {
   $$('.tab').forEach(b => b.classList.toggle('activo', b.dataset.vista === v));
   ['instrucciones', 'fichas', 'tabla', 'enviar', 'cargadas'].forEach(x => $('#vista-' + x).classList.toggle('oculta', x !== v));
   window.scrollTo(0, 0);
+  // cada hoja se redibuja al entrar: así lo cargado en Tabla se ve al toque en Fichas
+  if (v === 'fichas') pintarFichas();
   if (v === 'tabla') pintarTabla();
   if (v === 'enviar') pintarAvisos();
   if (v === 'cargadas') pintarCargadas();
@@ -1035,23 +1045,24 @@ function iniciar() {
   ESQ.columnas.forEach(c => { PORCOL[c.col] = c; PORID[c.id] = c; });
   document.title = ESQ.titulo + ' — LEMaC';
   cargarGuardado();
-  $('#autor').value = ST.autor;
-  $('#autor').addEventListener('input', e => {
+  const inAutor = $('#autor');
+  if (inAutor) inAutor.value = ST.autor;
+  alTocar('#autor', 'input', e => {
     ST.autor = e.target.value.trim();
     clearTimeout(alCambiar._t);
     alCambiar._t = setTimeout(() => { guardar(); Nube.nombrar(ST.autor); }, 600);
   });
   $$('.tab').forEach(b => b.addEventListener('click', () => cambiarVista(b.dataset.vista)));
-  $('#btn-nueva').addEventListener('click', () => { nuevaMezcla(); pintarFichas(); });
-  $('#btn-nueva2').addEventListener('click', () => { nuevaMezcla(); pintarTabla(); pintarFichas(); });
-  $('#chk-compacta').addEventListener('change', aplicarCompacta);
-  $('#btn-xlsx').addEventListener('click', exportarXLSX);
-  $('#btn-csv').addEventListener('click', exportarCSV);
-  $('#btn-json').addEventListener('click', exportarJSON);
-  $('#btn-enviar').addEventListener('click', enviarAporte);
-  $('#btn-mail').addEventListener('click', enviarCorreo);
-  $('#archivo').addEventListener('change', alElegirArchivo);
-  $('#btn-borrar').addEventListener('click', () => {
+  alTocar('#btn-nueva', 'click', () => { nuevaMezcla(); pintarFichas(); });
+  alTocar('#btn-nueva2', 'click', () => { nuevaMezcla(); pintarTabla(); pintarFichas(); });
+  alTocar('#chk-compacta', 'change', aplicarCompacta);
+  alTocar('#btn-xlsx', 'click', exportarXLSX);
+  alTocar('#btn-csv', 'click', exportarCSV);
+  alTocar('#btn-json', 'click', exportarJSON);
+  alTocar('#btn-enviar', 'click', enviarAporte);
+  alTocar('#btn-mail', 'click', enviarCorreo);
+  alTocar('#archivo', 'change', alElegirArchivo);
+  alTocar('#btn-borrar', 'click', () => {
     if (Nube.estado.activa) {
       if (!confirm('Esto limpia la copia de este navegador. Las mezclas ya subidas siguen en la planilla compartida ' +
         '(para sacar una de ahí, abrila y usá “Borrar esta mezcla”). ¿Seguimos?')) return;
@@ -1063,11 +1074,11 @@ function iniciar() {
     if (!confirm('¿Borrar todas las mezclas guardadas en este navegador?')) return;
     ST.mezclas = []; ST.sel = ''; guardar(); pintarFichas(); pintarTabla(); pintarAvisos();
   });
-  $('#btn-cons-xlsx').addEventListener('click', () => {
+  alTocar('#btn-cons-xlsx', 'click', () => {
     if (!CARGADAS.length) { alert('Todavía no hay mezclas consolidadas.'); return; }
     bajarXLSX(CARGADAS, 'mezclas-consolidadas-' + new Date().toISOString().slice(0, 10) + '.xlsx');
   });
-  $('#btn-cons-mias').addEventListener('click', () => {
+  alTocar('#btn-cons-mias', 'click', () => {
     if (!CARGADAS.length) { alert('Todavía no hay mezclas consolidadas.'); return; }
     if (!confirm('Se van a agregar ' + CARGADAS.length + ' mezcla(s) del consolidado a las tuyas. ¿Seguimos?')) return;
     CARGADAS.forEach(m => ST.mezclas.push(saneaMezcla({ nombre: m.nombre, tipo: m.tipo, d: Object.assign({}, m.d) })));
@@ -1075,12 +1086,13 @@ function iniciar() {
   });
   pintarAyuda();
   $$('.btn-ir').forEach(b => b.addEventListener('click', () => cambiarVista(b.dataset.ir)));
-  $('#nube').addEventListener('click', () => {
+  alTocar('#nube', 'click', () => {
     alert(Nube.diagnostico());
     if (Nube.estado.activa) Nube.sondear();
   });
-  $('#btn-subir').addEventListener('click', () => { subirTodasLocales(); pintarEstadoNube(); });
-  $('#nota-repo').textContent = 'Los aportes van al repositorio ' + repoDetectado() + '.';
+  alTocar('#btn-subir', 'click', () => { subirTodasLocales(); pintarEstadoNube(); });
+  const nota = $('#nota-repo');
+  if (nota) nota.textContent = 'Los aportes van al repositorio ' + repoDetectado() + '.';
   marcarGuardado(ST.mezclas.length ? ST.mezclas.length + ' mezcla(s) guardada(s)' : 'sin datos todavía');
   if (ST.mezclas.length) ST.sel = ST.mezclas[0].lid;
   pintarFichas();
@@ -1088,10 +1100,36 @@ function iniciar() {
   window.addEventListener('beforeunload', guardar);
 }
 
+function fallo(titulo, detalle) {
+  const m = document.querySelector('main');
+  if (!m) return;
+  m.textContent = '';
+  const p = el('div', { class: 'panel' }, [
+    el('h2', { text: titulo }),
+    el('p', { text: detalle }),
+    el('p', { class: 'nota', text: 'Casi siempre se arregla recargando la página sin caché: Ctrl+F5 (o Cmd+Shift+R en Mac).' }),
+    el('button', { class: 'btn btn-fuerte', type: 'button', text: 'Recargar', onclick: () => location.reload(true) })
+  ]);
+  m.appendChild(p);
+}
+
 fetch('datos/esquema.json', { cache: 'no-store' })
-  .then(r => r.json())
-  .then(o => { ESQ = o; iniciar(); })
+  .then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  })
   .catch(e => {
-    document.querySelector('main').innerHTML =
-      '<div class="panel"><h2>No se pudo cargar el esquema</h2><p>Revisá que exista <code>datos/esquema.json</code>. (' + e.message + ')</p></div>';
-  });
+    fallo('No se pudo leer la definición de la planilla',
+      'No se pudo descargar datos/esquema.json (' + e.message + '). Puede ser la conexión.');
+    throw e;
+  })
+  .then(o => {
+    ESQ = o;
+    try {
+      iniciar();
+    } catch (e) {
+      fallo('La planilla no pudo arrancar', 'Error inesperado: ' + e.message);
+      throw e;
+    }
+  })
+  .catch(() => { /* ya se mostró el cartel */ });
