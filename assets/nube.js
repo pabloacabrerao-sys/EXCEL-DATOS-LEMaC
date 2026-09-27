@@ -32,6 +32,15 @@ window.Nube = (function () {
   const ahora = () => Date.now();
   const CLAVE_ID = 'lemac.planilla.participante';
 
+  // Acepta la URL del proyecto con o sin barra final y con o sin /rest/v1
+  // pegado (es lo que muestra el panel de Supabase en algunas pantallas).
+  function urlBase(u) {
+    let v = String(u || '').trim();
+    if (!v) return '';
+    if (!/^https?:\/\//i.test(v)) v = 'https://' + v;
+    return v.replace(/\/+$/, '').replace(/\/rest\/v1$/i, '').replace(/\/+$/, '');
+  }
+
   function identificarme() {
     let v = '';
     try { v = localStorage.getItem(CLAVE_ID) || ''; } catch (e) { /* sin storage */ }
@@ -53,7 +62,7 @@ window.Nube = (function () {
   }
 
   function pedir(ruta, opciones) {
-    return fetch(cfg.url.replace(/\/+$/, '') + '/rest/v1' + ruta, opciones)
+    return fetch(cfg.url + '/rest/v1' + ruta, opciones)
       .then(r => r.text().then(txt => {
         if (!r.ok) throw new Error('HTTP ' + r.status + (txt ? ' · ' + txt.slice(0, 200) : ''));
         return txt ? JSON.parse(txt) : null;
@@ -192,6 +201,8 @@ window.Nube = (function () {
       .catch(() => null)
       .then(c => {
         cfg = c || {};
+        cfg.url = urlBase(cfg.url);
+        cfg.clave = String(cfg.clave || '').trim();
         if (!cfg.url || !cfg.clave) {
           est.activa = false;
           alEstado(Object.assign({}, est));
@@ -218,8 +229,32 @@ window.Nube = (function () {
     if (canal && cli) { try { cli.removeChannel(canal); } catch (e) { /* ya cerrado */ } }
   }
 
+  function diagnostico() {
+    if (!est.activa) {
+      return 'Modo local: datos/config-nube.json todavía no tiene la URL y la clave del proyecto de Supabase.\n' +
+        'Mientras tanto cada uno carga en su navegador y manda el archivo desde “Enviar / Exportar”.';
+    }
+    const l = [
+      'Proyecto: ' + cfg.url,
+      'Conexión con la base: ' + (est.conectada ? 'bien' : 'FALLA'),
+      'Avisos instantáneos (WebSocket): ' + (est.enVivo ? 'sí' : 'no — se sincroniza cada ' + (cfg.sondeoSegundos || 3) + ' s'),
+      'Tu identificador: ' + est.yo
+    ];
+    if (est.error) {
+      l.push('', 'Último error: ' + est.error);
+      if (/404|PGRST20[0-9]/.test(est.error)) {
+        l.push('Parece que las tablas todavía no existen: falta correr supabase/esquema.sql en el SQL Editor.');
+      } else if (/401|403|JWT|apikey/i.test(est.error)) {
+        l.push('La clave no es la correcta: tiene que ser la “anon public” / publishable del proyecto.');
+      } else if (/Failed to fetch|NetworkError|CORS/i.test(est.error)) {
+        l.push('No se llegó al servidor: revisá la URL del proyecto, la conexión, o si Supabase pausó el proyecto por inactividad.');
+      }
+    }
+    return l.join('\n');
+  }
+
   return {
     estado: est, iniciar, listar, crear, parchear, borrar,
-    anunciar, sondear, nombrar, detener
+    anunciar, sondear, nombrar, detener, diagnostico
   };
 })();

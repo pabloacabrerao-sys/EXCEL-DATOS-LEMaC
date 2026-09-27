@@ -30,7 +30,8 @@ los permisos y los avisos en tiempo real.
 
 En **Project Settings → API** (o *API Keys*) vas a ver:
 
-- **Project URL**: algo como `https://abcdefghijkl.supabase.co`
+- **Project URL**: algo como `https://abcdefghijkl.supabase.co`. Si la pantalla te la muestra
+  terminada en `/rest/v1/`, no importa: la página la acomoda sola.
 - **anon public** (en proyectos nuevos aparece como *publishable key*, empieza con `sb_publishable_`)
 
 ⚠️ Esa clave pública es la única que va acá. **Nunca** copies la `service_role` / *secret*: esa da
@@ -50,6 +51,9 @@ Editá `datos/config-nube.json`:
 
 Se puede hacer desde la web de GitHub (lápiz de editar → *Commit changes*). En un minuto o dos
 GitHub Pages republica la página.
+
+> Si algo no anda, tocá el cartel de estado arriba a la derecha: te dice contra qué proyecto está
+> hablando, si llega a la base, si tiene los avisos instantáneos y cuál fue el último error.
 
 ## 5. Probar
 

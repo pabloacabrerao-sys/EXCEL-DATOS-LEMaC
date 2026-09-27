@@ -1067,6 +1067,10 @@ function iniciar() {
     guardar(); subirTodasLocales(); pintarFichas(); cambiarVista('fichas');
   });
   $('#btn-ayuda').addEventListener('click', () => { pintarAyuda(); $('#dlg-ayuda').showModal(); });
+  $('#nube').addEventListener('click', () => {
+    alert(Nube.diagnostico());
+    if (Nube.estado.activa) Nube.sondear();
+  });
   $('#btn-subir').addEventListener('click', () => { subirTodasLocales(); pintarEstadoNube(); });
   $('#nota-repo').textContent = 'Los aportes van al repositorio ' + repoDetectado() + '.';
   marcarGuardado(ST.mezclas.length ? ST.mezclas.length + ' mezcla(s) guardada(s)' : 'sin datos todavía');

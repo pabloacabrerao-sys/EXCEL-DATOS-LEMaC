@@ -42,8 +42,9 @@ em{font-style:normal;font-weight:600}
 .tab.activo{color:var(--acento);border-bottom-color:var(--acento);font-weight:600}
 .nube{
   margin-left:auto;font-size:12px;padding:4px 10px;border-radius:99px;white-space:nowrap;
-  border:1px solid var(--borde);cursor:default
+  border:1px solid var(--borde);cursor:pointer
 }
+.nube:hover{filter:brightness(.96)}
 .nube.local{background:#eef1f4;color:var(--tinta-suave)}
 .nube.bien{background:#e6f4ea;border-color:#9ccfae;color:#1f6b3a}
 .nube.mal{background:#fbeceb;border-color:#e6bfbc;color:var(--peligro)}
