@@ -1,7 +1,7 @@
 {
  "titulo": "Planilla colaborativa de mezclas históricas",
  "subtitulo": "Para calibrar el Dosificador de mezclas asfálticas con diseños del laboratorio.",
- "version": 2,
+ "version": 3,
  "grupos": [
   {
    "titulo": "Identificación",
@@ -46,7 +46,7 @@
   {
    "titulo": "Agregados y ligante (según pliego)",
    "desde": "BS",
-   "n": 10
+   "n": 11
   }
  ],
  "fijas": [
@@ -648,6 +648,15 @@
   },
   {
    "col": "BW",
+   "id": "densidad_cal_hidratada_g_cm3",
+   "label": "Densidad de la cal (g/cm³)",
+   "ayuda": "Densidad de partículas de la cal hidratada, IRAM 1542. Si falta se adopta 2,24.",
+   "tipo": "numero",
+   "min": 0,
+   "max": 10
+  },
+  {
+   "col": "BX",
    "id": "pct_filler_de_aporte",
    "label": "% filler de aporte",
    "ayuda": "Filler mineral de aporte, sobre el total de agregado. 0 si no lleva. La cal hidratada va aparte, en la columna anterior.",
@@ -656,21 +665,21 @@
    "max": 100
   },
   {
-   "col": "BX",
+   "col": "BY",
    "id": "densidad_filler_de_aporte_g_cm3",
    "label": "Densidad filler de aporte (g/cm³)",
    "ayuda": "IRAM 1542",
    "tipo": "numero"
   },
   {
-   "col": "BY",
+   "col": "BZ",
    "id": "cs_del_filler",
    "label": "Cs del filler",
    "ayuda": "Concentración crítica, IRAM 1542",
    "tipo": "numero"
   },
   {
-   "col": "BZ",
+   "col": "CA",
    "id": "vca_varillado_fraccion_gruesa_pct",
    "label": "VCA varillado fracción gruesa (%)",
    "ayuda": "AASHTO T19",
@@ -679,14 +688,14 @@
    "max": 100
   },
   {
-   "col": "CA",
+   "col": "CB",
    "id": "densidad_del_ligante",
    "label": "Densidad del ligante",
    "ayuda": "Si falta se toma 1,03",
    "tipo": "numero"
   },
   {
-   "col": "CB",
+   "col": "CC",
    "id": "observaciones",
    "label": "Observaciones",
    "tipo": "texto"
@@ -770,9 +779,10 @@
     "BV": "recomendado",
     "BX": "recomendado",
     "BY": "recomendado",
-    "BZ": "no_aplica",
-    "CA": "recomendado",
+    "BZ": "recomendado",
+    "CA": "no_aplica",
     "CB": "recomendado",
+    "CC": "recomendado",
     "BW": "recomendado"
    }
   },
@@ -853,9 +863,10 @@
     "BV": "recomendado",
     "BX": "recomendado",
     "BY": "recomendado",
-    "BZ": "no_aplica",
-    "CA": "recomendado",
+    "BZ": "recomendado",
+    "CA": "no_aplica",
     "CB": "recomendado",
+    "CC": "recomendado",
     "BW": "recomendado"
    }
   },
@@ -935,10 +946,11 @@
     "BU": "recomendado",
     "BV": "recomendado",
     "BX": "recomendado",
-    "BY": "no_aplica",
+    "BY": "recomendado",
     "BZ": "no_aplica",
-    "CA": "recomendado",
+    "CA": "no_aplica",
     "CB": "recomendado",
+    "CC": "recomendado",
     "BW": "recomendado"
    }
   },
@@ -1018,10 +1030,11 @@
     "BU": "recomendado",
     "BV": "recomendado",
     "BX": "recomendado",
-    "BY": "no_aplica",
+    "BY": "recomendado",
     "BZ": "no_aplica",
-    "CA": "recomendado",
+    "CA": "no_aplica",
     "CB": "recomendado",
+    "CC": "recomendado",
     "BW": "recomendado"
    }
   },
@@ -1101,10 +1114,11 @@
     "BU": "recomendado",
     "BV": "recomendado",
     "BX": "recomendado",
-    "BY": "no_aplica",
+    "BY": "recomendado",
     "BZ": "no_aplica",
-    "CA": "recomendado",
+    "CA": "no_aplica",
     "CB": "recomendado",
+    "CC": "recomendado",
     "BW": "recomendado"
    }
   },
@@ -1184,10 +1198,11 @@
     "BU": "recomendado",
     "BV": "recomendado",
     "BX": "recomendado",
-    "BY": "no_aplica",
-    "BZ": "recomendado",
+    "BY": "recomendado",
+    "BZ": "no_aplica",
     "CA": "recomendado",
     "CB": "recomendado",
+    "CC": "recomendado",
     "BW": "recomendado"
    }
   },
@@ -1267,10 +1282,11 @@
     "BU": "recomendado",
     "BV": "recomendado",
     "BX": "recomendado",
-    "BY": "no_aplica",
-    "BZ": "recomendado",
+    "BY": "recomendado",
+    "BZ": "no_aplica",
     "CA": "recomendado",
     "CB": "recomendado",
+    "CC": "recomendado",
     "BW": "recomendado"
    }
   },
@@ -1350,10 +1366,11 @@
     "BU": "recomendado",
     "BV": "recomendado",
     "BX": "recomendado",
-    "BY": "no_aplica",
-    "BZ": "recomendado",
+    "BY": "recomendado",
+    "BZ": "no_aplica",
     "CA": "recomendado",
     "CB": "recomendado",
+    "CC": "recomendado",
     "BW": "recomendado"
    }
   }

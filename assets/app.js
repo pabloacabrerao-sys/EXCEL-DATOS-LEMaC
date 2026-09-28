@@ -91,22 +91,35 @@ function guardar() {
 function marcarGuardado(txt) { $('#guardado').textContent = txt; }
 
 // Los datos del navegador se guardan por letra de columna. Cuando el esquema
-// suma una columna en el medio, las letras se corren: esta tabla dice qué
-// significaba cada letra en la versión 1 para reubicar los valores por su id.
-const LETRAS_V1 = {
-  BW: 'densidad_filler_de_aporte_g_cm3',
-  BX: 'cs_del_filler',
-  BY: 'vca_varillado_fraccion_gruesa_pct',
-  BZ: 'densidad_del_ligante',
-  CA: 'observaciones'
+// suma una columna en el medio, las letras se corren: estas tablas dicen qué
+// significaba cada letra en cada versión anterior, para reubicar los valores
+// por su id y que nadie pierda una carga a medio hacer.
+const LETRAS_VIEJAS = {
+  1: {
+    BW: 'densidad_filler_de_aporte_g_cm3',
+    BX: 'cs_del_filler',
+    BY: 'vca_varillado_fraccion_gruesa_pct',
+    BZ: 'densidad_del_ligante',
+    CA: 'observaciones'
+  },
+  2: {
+    BW: 'pct_filler_de_aporte',
+    BX: 'densidad_filler_de_aporte_g_cm3',
+    BY: 'cs_del_filler',
+    BZ: 'vca_varillado_fraccion_gruesa_pct',
+    CA: 'densidad_del_ligante',
+    CB: 'observaciones'
+  }
 };
 
-function migrarDesdeV1(mezclas) {
+function migrarLetras(mezclas, version) {
+  const tabla = LETRAS_VIEJAS[version];
+  if (!tabla) return mezclas;
   mezclas.forEach(m => {
     if (!m || !m.d) return;
     const d = {};
     for (const letra in m.d) {
-      const id = LETRAS_V1[letra];
+      const id = tabla[letra];
       const destino = id && PORID[id] ? PORID[id].col : letra;
       d[destino] = m.d[letra];
     }
@@ -123,9 +136,9 @@ function cargarGuardado() {
     if (o && Array.isArray(o.mezclas)) {
       ST.autor = o.autor || '';
       const version = Number(o.esq) || 1;
-      const mezclas = version < 2 ? migrarDesdeV1(o.mezclas) : o.mezclas;
+      const mezclas = version < ESQ.version ? migrarLetras(o.mezclas, version) : o.mezclas;
       ST.mezclas = mezclas.map(saneaMezcla);
-      if (version < 2) guardar();
+      if (version < ESQ.version) guardar();
     }
   } catch (e) { /* si está corrupto se arranca de cero */ }
 }
