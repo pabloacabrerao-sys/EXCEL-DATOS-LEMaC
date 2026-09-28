@@ -82,13 +82,38 @@ function estado(mez) {
 /* ------------------------------------------------------------ persistencia */
 function guardar() {
   try {
-    localStorage.setItem(CONFIG.clave, JSON.stringify({ autor: ST.autor, mezclas: ST.mezclas }));
+    localStorage.setItem(CONFIG.clave, JSON.stringify({ esq: ESQ.version, autor: ST.autor, mezclas: ST.mezclas }));
     marcarGuardado('Guardado ' + new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
   } catch (e) {
     marcarGuardado('No se pudo guardar en este navegador');
   }
 }
 function marcarGuardado(txt) { $('#guardado').textContent = txt; }
+
+// Los datos del navegador se guardan por letra de columna. Cuando el esquema
+// suma una columna en el medio, las letras se corren: esta tabla dice qué
+// significaba cada letra en la versión 1 para reubicar los valores por su id.
+const LETRAS_V1 = {
+  BW: 'densidad_filler_de_aporte_g_cm3',
+  BX: 'cs_del_filler',
+  BY: 'vca_varillado_fraccion_gruesa_pct',
+  BZ: 'densidad_del_ligante',
+  CA: 'observaciones'
+};
+
+function migrarDesdeV1(mezclas) {
+  mezclas.forEach(m => {
+    if (!m || !m.d) return;
+    const d = {};
+    for (const letra in m.d) {
+      const id = LETRAS_V1[letra];
+      const destino = id && PORID[id] ? PORID[id].col : letra;
+      d[destino] = m.d[letra];
+    }
+    m.d = d;
+  });
+  return mezclas;
+}
 
 function cargarGuardado() {
   try {
@@ -97,7 +122,10 @@ function cargarGuardado() {
     const o = JSON.parse(raw);
     if (o && Array.isArray(o.mezclas)) {
       ST.autor = o.autor || '';
-      ST.mezclas = o.mezclas.map(saneaMezcla);
+      const version = Number(o.esq) || 1;
+      const mezclas = version < 2 ? migrarDesdeV1(o.mezclas) : o.mezclas;
+      ST.mezclas = mezclas.map(saneaMezcla);
+      if (version < 2) guardar();
     }
   } catch (e) { /* si está corrupto se arranca de cero */ }
 }

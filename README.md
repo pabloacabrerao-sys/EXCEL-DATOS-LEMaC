@@ -13,7 +13,7 @@ Para prender el segundo hay que crear una base gratuita en Supabase y pegar dos 
 
 ## Qué hace la página
 
-- Mismas 79 columnas, mismos ocho tipos de mezcla (CAC D 12, CAC D 19, MAC F8, MAC F10, CAD 12,
+- Las columnas del Excel original (más “% filler de aporte”, que faltaba), mismos ocho tipos de mezcla (CAC D 12, CAC D 19, MAC F8, MAC F10, CAD 12,
   SMA 10, SMA 12, SMA 19) y la misma matriz de obligatorio / recomendado / no aplica del Excel.
 - **Instrucciones**: es lo primero que se abre, con los pasos en texto grande y botones que llevan
   a cada hoja. **Tabla**: la planilla completa, con los mismos colores que el Excel.
